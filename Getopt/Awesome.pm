@@ -1,7 +1,7 @@
 #
 # Getopt::Awesome
 #
-# Author(s): Pablo Fischer (pfs@yahoo-inc.com)
+# Author(s): Pablo Fischer (pfischer@cpan.org)
 # Created: 09/25/2009 11:43:15 AM
 package Getopt::Awesome;
 
@@ -15,13 +15,19 @@ use Getopt::Long qw(
     no_ignore_case);
 use Text::Wrap;
 use Exporter 'import';
-use Data::Dumper;
 
-our @EXPORT_OK = qw(usage define_option define_options get_opt parse_opts %args);
+our @EXPORT_OK = qw(
+    usage
+    define_option
+    define_options
+    get_opt
+    set_opt
+    parse_opts
+    %args);
 our @EXPORT = qw(parse_opts);
 our %EXPORT_TAGS = (
     'all' => [ @EXPORT_OK ],
-    'common' => [ qw(define_option define_options get_opt) ],
+    'common' => [ qw(define_option define_options get_opt set_opt) ],
 );
 
 =head1 NAME
@@ -143,7 +149,7 @@ sub define_option {
     define_options([[$option_name, $option_description]]);
 }
 
-=head2 C<get_opt> (string option name, string default value)
+=head2 C<get_opt> ([string package], string option name, string default value)
 
     use Getopt::Awesome qw(:common);
 
@@ -160,11 +166,16 @@ Getopt::Long.
 sub get_opt {
     my ($option_name, $default_value) = @_;
     return $default_value unless $option_name;
-    my $current_package = _get_option_package();
-    if ($current_package ne 'main') {
-        $current_package = lc $current_package;
-        $current_package =~ s/::/-/g;
-        $option_name = $current_package . '-' . $option_name;
+    # The option name comes with a namespace?
+    my $package = _get_option_package();
+    if ($option_name =~ /(\S+::){1,}(\S+)$/) {
+        $package = substr($1, 0, -2);
+        $option_name = $2;
+    }
+    if ($package ne 'main') {
+        $package = lc $package;
+        $package =~ s/::/-/g;
+        $option_name = $package . '-' . $option_name;
     }
     if (defined $args{$option_name}) {
         return $args{$option_name};
@@ -174,6 +185,27 @@ sub get_opt {
         }
     }
     return '';
+}
+
+=head2 C<set_opt> ([string package], string option name, string value)
+
+    use Getopt::Awesome qw(:common);
+    
+    set_opt('option_name', 'Value');
+=cut
+sub set_opt {
+    my ($option_name, $option_value) = @_;
+    my $package = _get_option_package();
+    if ($option_name =~ /(\S+::){1,}(\S+)$/) {
+        $package = substr($1, 0, -2);
+        $option_name = $2;
+    }
+    if ($package ne 'main') {
+        $package = lc $package;
+        $package =~ s/::/-/g;
+        $option_name = $package . '-' . $option_name;
+    }
+    $args{$option_name} = $option_value;
 }
 
 =head2 C<parse_opts>
@@ -258,7 +290,7 @@ sub usage {
             my @aliases = split('\|', $option_name);
             foreach (@aliases) {
                 my $dash = length $_ eq 1 ? '-' : '--';
-                if ($package eq 'main')
+                if ($package eq 'main') {
                     $_ = "$dash$_";
                 } else {
                     $_ = "-$_";
