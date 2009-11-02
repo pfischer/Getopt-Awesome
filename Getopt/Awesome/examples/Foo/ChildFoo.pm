@@ -1,8 +1,8 @@
 #
-# Foo::ChildFoo
+# Getopt::Awesome::Examples::Foo::ChildFoo
 #
 # Created: 10/07/2009 09:07:46 AM
-package Foo::ChildFoo;
+package Getopt::Awesome::Examples::Foo::ChildFoo;
 
 use strict;
 use warnings;
