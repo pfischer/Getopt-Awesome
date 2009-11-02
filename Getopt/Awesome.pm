@@ -30,6 +30,8 @@ our %EXPORT_TAGS = (
     'common' => [ qw(define_option define_options get_opt set_opt) ],
 );
 
+our $VERSION = '0.1';
+
 =head1 NAME
 
 Getopt::Awesome - Expands the Getopt *automatically* for modules.
