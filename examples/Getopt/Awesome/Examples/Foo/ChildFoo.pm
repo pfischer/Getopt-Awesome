@@ -6,7 +6,7 @@ package Getopt::Awesome::Examples::Foo::ChildFoo;
 
 use strict;
 use warnings;
-use base qw(Foo);
+use base qw(Getopt::Awesome::Examples::Foo);
 use Getopt::Awesome qw(:common);
 
 define_option('example=s', 'An example from first child');

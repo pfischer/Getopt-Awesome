@@ -5,6 +5,86 @@
 # Created: 09/25/2009 11:43:15 AM
 package Getopt::Awesome;
 
+=head1 NAME
+
+Getopt::Awesome - Let your modules define/export their own arguments
+
+=head1 DESCRIPTION
+
+First of, this module was very inspired in the Getopt::Modular CPAN package
+however at the moment of using it I found it was giving me "more" of what I
+was looking so I thought I could borrow some ideas of it, make it lighter
+and add some of the features/functionalities I was looking for and so this
+is the result: a module I've been using every day for all my perl scripts
+and modules, though would be nice to give it to the Perl community.
+
+Now, this module is handy if you want to give your modules the freedom of
+definining their own "getopt options" so next time they get called (or *used*)
+the options will be available in the form of arguments (--foo, --bar).
+
+Another feature of this module is that when user asks for help (-h or --help)
+a usage will be printed by showing all the options available by the current
+perl script and by all the modules in use.
+
+All options are prefixed by the package name in lowercase where namespace
+separator (::) gets replaced by a dash (-), so --help will return:
+
+    --foo-bar-option   Description.
+    --foo-bar-option2  Description 2.
+
+and so on..
+
+See the SYNOPSYS section for examples.
+
+B<Notes:>
+
+=over 4
+
+=item *
+
+The use of short aliases is not supported for options defined in modules, this
+feature (provided by Getopt) is only available in the main script (.pl)
+
+=item *
+
+In your perl script (.pl) remember to call parse_opts otherwise the values of
+the options you request might be undef, empty or have their default values.
+
+=item *
+
+I<Remember:> ARGV is ONLY parsed when parse_opt is called.
+
+=back
+
+=head1 SYNOPSYS
+
+    package Your::Package;
+
+    use Getopt::Awesome qw(:common);
+    define_option('foo=s', 'Foo bar');
+    # ...or...
+
+    define_options(
+        ('foo=s', 'Foo'),
+        ('bar=s', 'Bar'));
+
+    parse_opts();
+    my $foo_val = get_opt('option_name', 'Default value');
+
+=head1 AUTHOR
+ 
+Pablo Fischer (pablo@pablo.com.mx).
+
+=head1 COPYRIGHT
+ 
+Copyright (C) 2009 by Pablo Fischer
+ 
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
+    
+=cut
+use 5.006;
+
 use strict;
 use warnings;
 use vars qw($no_usage $app_name $no_usage_exit);
@@ -30,64 +110,16 @@ our %EXPORT_TAGS = (
     'common' => [ qw(define_option define_options get_opt set_opt) ],
 );
 
-our $VERSION = '0.1';
+our $VERSION = '0.1.1';
 
-=head1 NAME
-
-Getopt::Awesome - Expands the Getopt *automatically* for modules.
-
-=head1 DESCRIPTION
-
-First of, this module was very inspired in the Getopt::Modular CPAN apckage,
-however at the moment of creating this module the dependency chain of the
-mentioned module was very large so I though would be a nice idea to copy
-some concepts from it and the regular Getopt.
-
-Now, this module is handy if you want to give "getopt options" to a module
-like it could be a normal perl script (.pl) and don't want to be rewriting
-all the options over and over everytime.
-
-When user asks for help usage (-h or --help) he/she will also get all the
-available options that were set via this module.
-
-All options are prefixed by the package name in lowercase where namespace
-separator (::) gets replaced by a dash (-), so --help will return:
-
---foo-bar-option   Description
---foo-bar-option2  Description 2
-
-and so on..
-
-See the SYNOPSYS section for examples.
-
-NOTE 1: The use of short aliases is not supported for options defined
-in modules, only for main (the .pl script).
-NOTE 2: In your perl script (.pl) remember to call parse_opts otherwise the
-values of the options you request might be undef, empty or have your
-default values. ARGV is ONLY parsed when parse_opt is called.
-
-=head1 SYNOPSYS
-
-    package Your::Package;
-
-    use Getopt::Awesome qw(:common);
-    define_option('foo=s', 'Fooi bar');
-    ...or...
-
-    define_options(
-        ('foo=s', 'Foo'),
-        ('bar=s', 'Bar'));
-
-    parse_opts();
-    my $foo_val = get_opt('option_name', 'Default value');
-
-=cut
 
 my (%options, $parsed_args, $show_usage, %args);
 
 =head1 FUNCTIONS
 
-=head2 C<define_options> (array)
+=over 4
+
+=item B<define_options (@options)>
 
     use Getopt::Awesome;
     Getopt::Awesome qw(:common);
@@ -96,19 +128,28 @@ my (%options, $parsed_args, $show_usage, %args);
         ('option_name', 'Option description')
     );
 
-It defines the given options for current package, please note the options
-defined in the current caller package are not shared with other modules, this means
-that 'foo' option from package 'Foo' will not exist or will have different value
-from the 'foo' option of 'Bar' package.
+It defines the given options for the package/script that is making *the call*.
+
+Please note the options defined in the current caller package are not shared
+with other modules unless it's explicitly specified (see I<get_opt()>).
 
 Each array item should consist at least of 1 item with a max of 2. The first
 parameter should be the option name while the second one (optional) is the
-option description.
+description.
 
 Some notes about the option name, the first item of every array:
 
-B<*> It's a required parameter.
-B<*> It accepts any of the C<Getopt::Long> option name styles (=s, !, =%s, etc).
+=over 4
+
+=item *
+
+It's a required parameter.
+
+=item *
+
+It accepts any of the C<Getopt::Long> option name styles (=s, !, =s@, etc).
+
+=back
 
 =cut
 sub define_options {
@@ -130,19 +171,29 @@ sub define_options {
     }
 }
 
-=head2 C<define_option> (string, optional string)
+=item B<define_option( $name, $description )>
 
     use Getopt::Awesome qw(:common);
 
     define_option('option_name', 'Description');
 
-It calls the C<define_options> subroutine for adding the given option.
+It calls the I<define_options> subroutine for adding the given option
+(I<$name>) with an optional description (I<$description>).
 
 Please refer to the documentation of C<define_options> for a more complete
 description about it, but basically some notes:
 
-B<*> The option name is a required parameter
-B<*> The option accepts any of te C<Getopt::Long> option name styles.
+=over 4
+
+=item *
+
+The option name is a required parameter
+
+=item *
+
+The option accepts any of te C<Getopt::Long> option name styles.
+
+=back
 
 =cut
 sub define_option {
@@ -151,17 +202,19 @@ sub define_option {
     define_options([[$option_name, $option_description]]);
 }
 
-=head2 C<get_opt> ([string package], string option name, string default value)
+=item B<get_opt($option_name, $default_value)>
 
     use Getopt::Awesome qw(:common);
 
     my $val = get_opt('option_name', 'Some default opt');
+    # Gets the 'foome' option value of Foo::Bar module and defaults to 'foobie'
+    my $val = get_opt('Foo::Bar::foome', 'foobie');
 
 It will return the value of the given option, if there's no option set then
 undefined will be returned.
 
 Please note that if the option is set to expect a list you will receive a list,
-same for integer, strings, booleans, etc. Same as it happens with the 
+same for integer, strings, booleans, etc. Same as it happens with the
 Getopt::Long.
 
 =cut
@@ -189,11 +242,16 @@ sub get_opt {
     return '';
 }
 
-=head2 C<set_opt> ([string package], string option name, string value)
+=item B<set_opt ($option_name, $value)>
 
     use Getopt::Awesome qw(:common);
-    
+
     set_opt('option_name', 'Value');
+    # Sets the 'foome' option value to foobie of the Foo::Bar package.
+    set_opt('Foo::Bar::foome', 'foobie')
+
+Sets the given value to the given option.
+
 =cut
 sub set_opt {
     my ($option_name, $option_value) = @_;
@@ -210,7 +268,7 @@ sub set_opt {
     $args{$option_name} = $option_value;
 }
 
-=head2 C<parse_opts>
+=item B<parse_opts()>
 
 This subroutine should never be called directly unless you want to re-parse the
 arguments or that your module is not getting called from a perl script (.pl).
@@ -239,10 +297,10 @@ sub parse_opts {
     }
 }
 
-=head2 C<usage>
+=item B<usage()>
 
-Based on all the current options it will returns a nice and helpful
-'guide' to use the current options.
+Based on all the current options it returns a nice and helpful 'guide'
+of all the available options.
 
 Although the usage gets called directly if a -h or --help is passed
 and also if no_usage is set you can call it directly:
@@ -250,6 +308,8 @@ and also if no_usage is set you can call it directly:
     use Getopt::Awesome qw(:all);
 
     usage();
+
+=back
 
 =cut
 sub usage {
@@ -306,12 +366,12 @@ sub usage {
     }
 }
 
-=head2 C<_build_all_options>
 
-Should _never_ be called. It will parse all the options we have right now from
-main and other modules and prepare a hash that C<GetOpt::Long->GetOptions> will
-use to parse the arguments.
-=cut
+################### PRIVATE METHODS ####################
+#
+# Should _never_ be called directly. It will parse all the options we have and
+# will prepare a hash that C<Getopt::Long::Getoptions> will use to parse the
+# arguments provided by @ARGV.
 sub _build_all_options {
     my %get_options;
     foreach my $package (keys %options) {
@@ -328,11 +388,9 @@ sub _build_all_options {
     return %get_options;
 }
 
-=head2 C<_get_option_package>
-
-Returns the right option package where the options are going to be stored.
-
-=cut
+#
+# Returns the right option package where the options are going to be stored.
+#
 sub _get_option_package {
     # Look for the real package, it shouldn't be this package
     my ($caller_package, $tries, $max_tries) = ('', 0, 10);
